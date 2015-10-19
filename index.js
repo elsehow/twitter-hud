@@ -1,40 +1,44 @@
-var Twitter = require('twitter')
-   , fs = require('fs')
-	 , config = require('./config.js')
-	 , server= require('http').createServer()
-	 , Kefir = require('kefir')
-	 , locationFilter = require('./filterByBoundingBox.js')(config.boundingBox)
+var spawn = require('child_process').spawn
+  , server = require('http').createServer()
+	, CombineStreams = require('combine-stream')
+	, through = require('through2')
+  , JSONStream = require('JSONStream')
+  , fs = require('fs')
+	, es = require('event-stream')
+	, Kefir = require('kefir')
+  , config = require('./config.js')
+  , locationFilter = require('./filterByBoundingBox.js')(config.boundingBox)
 
-var JSONStream = require("JSONStream")
-var outstream = JSONStream.stringify()
-var samples = outstream.pipe(fs.createWriteStream('samples.json'))
 
-function tick () { 
+function smap (fn) {
+  return es.mapSync(fn)
+}
+
+function parsedStream (s) {
+	return Kefir.stream(function (emitter) {
+    s.pipe(JSONStream.parse('*'))
+		 .pipe(smap(emitter.emit)) 
+	})
+}
+
+var query  = spawn('node', [__dirname + '/query.js'])
+var stream = spawn('node', [__dirname + '/stream.js'])
+
+var tweets = Kefir.merge([
+  parsedStream(query.stdout)
+  , parsedStream(stream.stdout)
+])
+
+// turn all tweets that pass through into a sliding window of 25 tweets
+tweets
+  .filter(locationFilter)
+  .slidingWindow(25)
+  .onValue(writeToFile)
+
+//  logging stuff
+var stringifier = JSONStream.stringify()
+stringifier .pipe(require('fs').createWriteStream('samples.json'))
+function writeToFile (json) {
 	process.stdout.write('x')
+  stringifier.write(json)	
 }
-	 
-function handleTweet (tweet) {
-  console.log('@'+tweet.user.screen_name, tweet.text)
-  outstream.write(tweet)
-}
-
-function handleError (error) {
-  console.log(error)
-}
-
-var client = new Twitter(config.twitterKeys)
-
-client.stream('statuses/filter'
-		, {locations: config.bboxString}
-		, function (stream) {
-  			// handle errors
-  		  stream.on('error', handleError)
-  	    // handle tweets
-        var tweetStream = Kefir.fromEvents(stream,'data')
-  	    var localTweets = locationFilter(tweetStream)
-	      tweetStream.onValue(tick)
-        localTweets.onValue(handleTweet)
-		}
-)
-
-server.listen()
