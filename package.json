@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js"
+    "start": "ecstatic public",
+    "watch": "watchify client.js -o public/bundle.js",
+    "build": "browserify client.js -o public/bundle.js"
   },
   "author": "",
   "license": "ISC",
@@ -13,8 +15,15 @@
     "combine-stream": "0.0.4",
     "event-stream": "^3.3.2",
     "geocoordinate": "^0.1.5",
+    "google-maps-image-api-url": "^1.0.1",
     "kefir": "^3.1.0",
+    "main-loop": "^3.2.0",
+    "simple-linear-scale": "^1.0.1",
     "through2": "^2.0.0",
-    "twitter": "^1.2.5"
+    "twitter": "^1.2.5",
+    "virtual-dom": "^2.1.1"
+  },
+  "devDependencies": {
+    "watchify": "^3.4.0"
   }
 }

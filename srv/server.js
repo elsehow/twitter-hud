@@ -30,6 +30,7 @@ var tweets = Kefir.merge([
 ])
 
 // turn all tweets that pass through into a sliding window of 25 tweets
+// this is my application state
 tweets
   .filter(locationFilter)
   .slidingWindow(25)
