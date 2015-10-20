@@ -14,14 +14,25 @@ function writeEach (tweets) {
 
 var client = new Twitter(config.twitterKeys)
 
-//TODO make radius into longest dimension of bbox
+//make radius into longest dimension of bbox
+function longestDimension (bbox) {
+  return _.max([bbox.latitude.range, bbox.longitude.range])
+}
+
+function inKm (m) {
+  return m/1000.0
+}
 
 var bbox = config.boundingBox
-var myGeo = [bbox.centerLongitude(), bbox.centerLatitude(), '5mi'].join(',')
+var geocodeString = [
+  bbox.centerLongitude()
+  , bbox.centerLatitude()
+  , inKm(longestDimension(bbox)) + 'km'
+].join(',')
 
 var tweets = Kefir.fromNodeCallback(function (callback) {
   client.get('search/tweets'
-  		, {geocode: myGeo}
+  		, { geocode: geocodeString }
   		, callback)
 })
 

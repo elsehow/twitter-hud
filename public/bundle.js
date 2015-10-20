@@ -122,248 +122,7 @@ function render (state) {
 // setup page
 document.querySelector('#content').appendChild(loop.target)
 
-},{"./srv/config.js":48,"./srv/samples.js":49,"lodash":13,"main-loop":14,"simple-linear-scale":17,"virtual-dom":22,"virtual-dom/h":21}],2:[function(require,module,exports){
-/*!
- * Cross-Browser Split 1.1.1
- * Copyright 2007-2012 Steven Levithan <stevenlevithan.com>
- * Available under the MIT License
- * ECMAScript compliant, uniform cross-browser split method
- */
-
-/**
- * Splits a string into an array of strings using a regex or string separator. Matches of the
- * separator are not included in the result array. However, if `separator` is a regex that contains
- * capturing groups, backreferences are spliced into the result each time `separator` is matched.
- * Fixes browser bugs compared to the native `String.prototype.split` and can be used reliably
- * cross-browser.
- * @param {String} str String to split.
- * @param {RegExp|String} separator Regex or string to use for separating the string.
- * @param {Number} [limit] Maximum number of items to include in the result array.
- * @returns {Array} Array of substrings.
- * @example
- *
- * // Basic use
- * split('a b c d', ' ');
- * // -> ['a', 'b', 'c', 'd']
- *
- * // With limit
- * split('a b c d', ' ', 2);
- * // -> ['a', 'b']
- *
- * // Backreferences in result array
- * split('..word1 word2..', /([a-z]+)(\d+)/i);
- * // -> ['..', 'word', '1', ' ', 'word', '2', '..']
- */
-module.exports = (function split(undef) {
-
-  var nativeSplit = String.prototype.split,
-    compliantExecNpcg = /()??/.exec("")[1] === undef,
-    // NPCG: nonparticipating capturing group
-    self;
-
-  self = function(str, separator, limit) {
-    // If `separator` is not a regex, use `nativeSplit`
-    if (Object.prototype.toString.call(separator) !== "[object RegExp]") {
-      return nativeSplit.call(str, separator, limit);
-    }
-    var output = [],
-      flags = (separator.ignoreCase ? "i" : "") + (separator.multiline ? "m" : "") + (separator.extended ? "x" : "") + // Proposed for ES6
-      (separator.sticky ? "y" : ""),
-      // Firefox 3+
-      lastLastIndex = 0,
-      // Make `global` and avoid `lastIndex` issues by working with a copy
-      separator = new RegExp(separator.source, flags + "g"),
-      separator2, match, lastIndex, lastLength;
-    str += ""; // Type-convert
-    if (!compliantExecNpcg) {
-      // Doesn't need flags gy, but they don't hurt
-      separator2 = new RegExp("^" + separator.source + "$(?!\\s)", flags);
-    }
-    /* Values for `limit`, per the spec:
-     * If undefined: 4294967295 // Math.pow(2, 32) - 1
-     * If 0, Infinity, or NaN: 0
-     * If positive number: limit = Math.floor(limit); if (limit > 4294967295) limit -= 4294967296;
-     * If negative number: 4294967296 - Math.floor(Math.abs(limit))
-     * If other: Type-convert, then use the above rules
-     */
-    limit = limit === undef ? -1 >>> 0 : // Math.pow(2, 32) - 1
-    limit >>> 0; // ToUint32(limit)
-    while (match = separator.exec(str)) {
-      // `separator.lastIndex` is not reliable cross-browser
-      lastIndex = match.index + match[0].length;
-      if (lastIndex > lastLastIndex) {
-        output.push(str.slice(lastLastIndex, match.index));
-        // Fix browsers whose `exec` methods don't consistently return `undefined` for
-        // nonparticipating capturing groups
-        if (!compliantExecNpcg && match.length > 1) {
-          match[0].replace(separator2, function() {
-            for (var i = 1; i < arguments.length - 2; i++) {
-              if (arguments[i] === undef) {
-                match[i] = undef;
-              }
-            }
-          });
-        }
-        if (match.length > 1 && match.index < str.length) {
-          Array.prototype.push.apply(output, match.slice(1));
-        }
-        lastLength = match[0].length;
-        lastLastIndex = lastIndex;
-        if (output.length >= limit) {
-          break;
-        }
-      }
-      if (separator.lastIndex === match.index) {
-        separator.lastIndex++; // Avoid an infinite loop
-      }
-    }
-    if (lastLastIndex === str.length) {
-      if (lastLength || !separator.test("")) {
-        output.push("");
-      }
-    } else {
-      output.push(str.slice(lastLastIndex));
-    }
-    return output.length > limit ? output.slice(0, limit) : output;
-  };
-
-  return self;
-})();
-
-},{}],3:[function(require,module,exports){
-module.exports = function(obj) {
-    if (typeof obj === 'string') return camelCase(obj);
-    return walk(obj);
-};
-
-function walk (obj) {
-    if (!obj || typeof obj !== 'object') return obj;
-    if (isDate(obj) || isRegex(obj)) return obj;
-    if (isArray(obj)) return map(obj, walk);
-    return reduce(objectKeys(obj), function (acc, key) {
-        var camel = camelCase(key);
-        acc[camel] = walk(obj[key]);
-        return acc;
-    }, {});
-}
-
-function camelCase(str) {
-    return str.replace(/[_.-](\w|$)/g, function (_,x) {
-        return x.toUpperCase();
-    });
-}
-
-var isArray = Array.isArray || function (obj) {
-    return Object.prototype.toString.call(obj) === '[object Array]';
-};
-
-var isDate = function (obj) {
-    return Object.prototype.toString.call(obj) === '[object Date]';
-};
-
-var isRegex = function (obj) {
-    return Object.prototype.toString.call(obj) === '[object RegExp]';
-};
-
-var has = Object.prototype.hasOwnProperty;
-var objectKeys = Object.keys || function (obj) {
-    var keys = [];
-    for (var key in obj) {
-        if (has.call(obj, key)) keys.push(key);
-    }
-    return keys;
-};
-
-function map (xs, f) {
-    if (xs.map) return xs.map(f);
-    var res = [];
-    for (var i = 0; i < xs.length; i++) {
-        res.push(f(xs[i], i));
-    }
-    return res;
-}
-
-function reduce (xs, f, acc) {
-    if (xs.reduce) return xs.reduce(f, acc);
-    for (var i = 0; i < xs.length; i++) {
-        acc = f(acc, xs[i], i);
-    }
-    return acc;
-}
-
-},{}],4:[function(require,module,exports){
-var camelize = require("camelize")
-var template = require("string-template")
-var extend = require("xtend/mutable")
-
-module.exports = TypedError
-
-function TypedError(args) {
-    if (!args) {
-        throw new Error("args is required");
-    }
-    if (!args.type) {
-        throw new Error("args.type is required");
-    }
-    if (!args.message) {
-        throw new Error("args.message is required");
-    }
-
-    var message = args.message
-
-    if (args.type && !args.name) {
-        var errorName = camelize(args.type) + "Error"
-        args.name = errorName[0].toUpperCase() + errorName.substr(1)
-    }
-
-    extend(createError, args);
-    createError._name = args.name;
-
-    return createError;
-
-    function createError(opts) {
-        var result = new Error()
-
-        Object.defineProperty(result, "type", {
-            value: result.type,
-            enumerable: true,
-            writable: true,
-            configurable: true
-        })
-
-        var options = extend({}, args, opts)
-
-        extend(result, options)
-        result.message = template(message, options)
-
-        return result
-    }
-}
-
-
-},{"camelize":3,"string-template":18,"xtend/mutable":47}],5:[function(require,module,exports){
-'use strict';
-
-var OneVersionConstraint = require('individual/one-version');
-
-var MY_VERSION = '7';
-OneVersionConstraint('ev-store', MY_VERSION);
-
-var hashKey = '__EV_STORE_KEY@' + MY_VERSION;
-
-module.exports = EvStore;
-
-function EvStore(elem) {
-    var hash = elem[hashKey];
-
-    if (!hash) {
-        hash = elem[hashKey] = {};
-    }
-
-    return hash;
-}
-
-},{"individual/one-version":11}],6:[function(require,module,exports){
+},{"./srv/config.js":49,"./srv/samples.js":50,"lodash":6,"main-loop":7,"simple-linear-scale":14,"virtual-dom":18,"virtual-dom/h":17}],2:[function(require,module,exports){
 var GeoCoordinate = require("./coordinate");
 
 /** returns the signed smallest distance between a and b assuming their 
@@ -544,7 +303,7 @@ GeoBoundingBox.prototype.getMatrix = function (splits) {
 };
 
 module.exports = GeoBoundingBox;
-},{"./coordinate":7}],7:[function(require,module,exports){
+},{"./coordinate":3}],3:[function(require,module,exports){
 var _ = require('lodash');
 
 var D2R = (Math.PI / 180.0);
@@ -699,87 +458,14 @@ GeoCoordinate.prototype = {
 };
 
 module.exports = GeoCoordinate;
-},{"lodash":13}],8:[function(require,module,exports){
+},{"lodash":5}],4:[function(require,module,exports){
 /*jshint evil: false, bitwise:false, strict: false, undef: true, white: false, plusplus:false, node:true */
 
 module.exports = {
     Coordinate: require('./coordinate'),
     BoundingBox: require('./boundingbox')
 };
-},{"./boundingbox":6,"./coordinate":7}],9:[function(require,module,exports){
-(function (global){
-var topLevel = typeof global !== 'undefined' ? global :
-    typeof window !== 'undefined' ? window : {}
-var minDoc = require('min-document');
-
-if (typeof document !== 'undefined') {
-    module.exports = document;
-} else {
-    var doccy = topLevel['__GLOBAL_DOCUMENT_CACHE@4'];
-
-    if (!doccy) {
-        doccy = topLevel['__GLOBAL_DOCUMENT_CACHE@4'] = minDoc;
-    }
-
-    module.exports = doccy;
-}
-
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"min-document":50}],10:[function(require,module,exports){
-(function (global){
-'use strict';
-
-/*global window, global*/
-
-var root = typeof window !== 'undefined' ?
-    window : typeof global !== 'undefined' ?
-    global : {};
-
-module.exports = Individual;
-
-function Individual(key, value) {
-    if (key in root) {
-        return root[key];
-    }
-
-    root[key] = value;
-
-    return value;
-}
-
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],11:[function(require,module,exports){
-'use strict';
-
-var Individual = require('./index.js');
-
-module.exports = OneVersion;
-
-function OneVersion(moduleName, version, defaultValue) {
-    var key = '__INDIVIDUAL_ONE_VERSION_' + moduleName;
-    var enforceKey = key + '_ENFORCE_SINGLETON';
-
-    var versionValue = Individual(enforceKey, version);
-
-    if (versionValue !== version) {
-        throw new Error('Can only have one copy of ' +
-            moduleName + '.\n' +
-            'You already have version ' + versionValue +
-            ' installed.\n' +
-            'This means you cannot install version ' + version);
-    }
-
-    return Individual(key, defaultValue);
-}
-
-},{"./index.js":10}],12:[function(require,module,exports){
-"use strict";
-
-module.exports = function isObject(x) {
-	return typeof x === "object" && x !== null;
-};
-
-},{}],13:[function(require,module,exports){
+},{"./boundingbox":2,"./coordinate":3}],5:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -13134,7 +12820,9 @@ module.exports = function isObject(x) {
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],14:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
+arguments[4][5][0].apply(exports,arguments)
+},{"dup":5}],7:[function(require,module,exports){
 var raf = require("raf")
 var TypedError = require("error/typed")
 
@@ -13215,47 +12903,171 @@ function main(initialState, view, opts) {
     }
 }
 
-},{"error/typed":4,"raf":16}],15:[function(require,module,exports){
-(function (process){
-// Generated by CoffeeScript 1.6.3
-(function() {
-  var getNanoSeconds, hrtime, loadTime;
+},{"error/typed":11,"raf":12}],8:[function(require,module,exports){
+module.exports = function(obj) {
+    if (typeof obj === 'string') return camelCase(obj);
+    return walk(obj);
+};
 
-  if ((typeof performance !== "undefined" && performance !== null) && performance.now) {
-    module.exports = function() {
-      return performance.now();
-    };
-  } else if ((typeof process !== "undefined" && process !== null) && process.hrtime) {
-    module.exports = function() {
-      return (getNanoSeconds() - loadTime) / 1e6;
-    };
-    hrtime = process.hrtime;
-    getNanoSeconds = function() {
-      var hr;
-      hr = hrtime();
-      return hr[0] * 1e9 + hr[1];
-    };
-    loadTime = getNanoSeconds();
-  } else if (Date.now) {
-    module.exports = function() {
-      return Date.now() - loadTime;
-    };
-    loadTime = Date.now();
-  } else {
-    module.exports = function() {
-      return new Date().getTime() - loadTime;
-    };
-    loadTime = new Date().getTime();
-  }
+function walk (obj) {
+    if (!obj || typeof obj !== 'object') return obj;
+    if (isDate(obj) || isRegex(obj)) return obj;
+    if (isArray(obj)) return map(obj, walk);
+    return reduce(objectKeys(obj), function (acc, key) {
+        var camel = camelCase(key);
+        acc[camel] = walk(obj[key]);
+        return acc;
+    }, {});
+}
 
-}).call(this);
+function camelCase(str) {
+    return str.replace(/[_.-](\w|$)/g, function (_,x) {
+        return x.toUpperCase();
+    });
+}
 
-/*
+var isArray = Array.isArray || function (obj) {
+    return Object.prototype.toString.call(obj) === '[object Array]';
+};
 
-*/
+var isDate = function (obj) {
+    return Object.prototype.toString.call(obj) === '[object Date]';
+};
 
-}).call(this,require('_process'))
-},{"_process":51}],16:[function(require,module,exports){
+var isRegex = function (obj) {
+    return Object.prototype.toString.call(obj) === '[object RegExp]';
+};
+
+var has = Object.prototype.hasOwnProperty;
+var objectKeys = Object.keys || function (obj) {
+    var keys = [];
+    for (var key in obj) {
+        if (has.call(obj, key)) keys.push(key);
+    }
+    return keys;
+};
+
+function map (xs, f) {
+    if (xs.map) return xs.map(f);
+    var res = [];
+    for (var i = 0; i < xs.length; i++) {
+        res.push(f(xs[i], i));
+    }
+    return res;
+}
+
+function reduce (xs, f, acc) {
+    if (xs.reduce) return xs.reduce(f, acc);
+    for (var i = 0; i < xs.length; i++) {
+        acc = f(acc, xs[i], i);
+    }
+    return acc;
+}
+
+},{}],9:[function(require,module,exports){
+var nargs = /\{([0-9a-zA-Z]+)\}/g
+var slice = Array.prototype.slice
+
+module.exports = template
+
+function template(string) {
+    var args
+
+    if (arguments.length === 2 && typeof arguments[1] === "object") {
+        args = arguments[1]
+    } else {
+        args = slice.call(arguments, 1)
+    }
+
+    if (!args || !args.hasOwnProperty) {
+        args = {}
+    }
+
+    return string.replace(nargs, function replaceArg(match, i, index) {
+        var result
+
+        if (string[index - 1] === "{" &&
+            string[index + match.length] === "}") {
+            return i
+        } else {
+            result = args.hasOwnProperty(i) ? args[i] : null
+            if (result === null || result === undefined) {
+                return ""
+            }
+
+            return result
+        }
+    })
+}
+
+},{}],10:[function(require,module,exports){
+module.exports = extend
+
+function extend(target) {
+    for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i]
+
+        for (var key in source) {
+            if (source.hasOwnProperty(key)) {
+                target[key] = source[key]
+            }
+        }
+    }
+
+    return target
+}
+
+},{}],11:[function(require,module,exports){
+var camelize = require("camelize")
+var template = require("string-template")
+var extend = require("xtend/mutable")
+
+module.exports = TypedError
+
+function TypedError(args) {
+    if (!args) {
+        throw new Error("args is required");
+    }
+    if (!args.type) {
+        throw new Error("args.type is required");
+    }
+    if (!args.message) {
+        throw new Error("args.message is required");
+    }
+
+    var message = args.message
+
+    if (args.type && !args.name) {
+        var errorName = camelize(args.type) + "Error"
+        args.name = errorName[0].toUpperCase() + errorName.substr(1)
+    }
+
+    extend(createError, args);
+    createError._name = args.name;
+
+    return createError;
+
+    function createError(opts) {
+        var result = new Error()
+
+        Object.defineProperty(result, "type", {
+            value: result.type,
+            enumerable: true,
+            writable: true,
+            configurable: true
+        })
+
+        var options = extend({}, args, opts)
+
+        extend(result, options)
+        result.message = template(message, options)
+
+        return result
+    }
+}
+
+
+},{"camelize":8,"string-template":9,"xtend/mutable":10}],12:[function(require,module,exports){
 var now = require('performance-now')
   , global = typeof window === 'undefined' ? {} : window
   , vendors = ['moz', 'webkit']
@@ -13337,7 +13149,47 @@ module.exports.cancel = function() {
   caf.apply(global, arguments)
 }
 
-},{"performance-now":15}],17:[function(require,module,exports){
+},{"performance-now":13}],13:[function(require,module,exports){
+(function (process){
+// Generated by CoffeeScript 1.6.3
+(function() {
+  var getNanoSeconds, hrtime, loadTime;
+
+  if ((typeof performance !== "undefined" && performance !== null) && performance.now) {
+    module.exports = function() {
+      return performance.now();
+    };
+  } else if ((typeof process !== "undefined" && process !== null) && process.hrtime) {
+    module.exports = function() {
+      return (getNanoSeconds() - loadTime) / 1e6;
+    };
+    hrtime = process.hrtime;
+    getNanoSeconds = function() {
+      var hr;
+      hr = hrtime();
+      return hr[0] * 1e9 + hr[1];
+    };
+    loadTime = getNanoSeconds();
+  } else if (Date.now) {
+    module.exports = function() {
+      return Date.now() - loadTime;
+    };
+    loadTime = Date.now();
+  } else {
+    module.exports = function() {
+      return new Date().getTime() - loadTime;
+    };
+    loadTime = new Date().getTime();
+  }
+
+}).call(this);
+
+/*
+
+*/
+
+}).call(this,require('_process'))
+},{"_process":52}],14:[function(require,module,exports){
 /**
  * Bare-bones equivalent for the functionality of d3.scale.linear
  * @param {Array<number>} domain
@@ -13366,58 +13218,22 @@ function linearScale(domain, range, clamp) {
 
 module.exports = linearScale;
 
-},{}],18:[function(require,module,exports){
-var nargs = /\{([0-9a-zA-Z]+)\}/g
-var slice = Array.prototype.slice
-
-module.exports = template
-
-function template(string) {
-    var args
-
-    if (arguments.length === 2 && typeof arguments[1] === "object") {
-        args = arguments[1]
-    } else {
-        args = slice.call(arguments, 1)
-    }
-
-    if (!args || !args.hasOwnProperty) {
-        args = {}
-    }
-
-    return string.replace(nargs, function replaceArg(match, i, index) {
-        var result
-
-        if (string[index - 1] === "{" &&
-            string[index + match.length] === "}") {
-            return i
-        } else {
-            result = args.hasOwnProperty(i) ? args[i] : null
-            if (result === null || result === undefined) {
-                return ""
-            }
-
-            return result
-        }
-    })
-}
-
-},{}],19:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 var createElement = require("./vdom/create-element.js")
 
 module.exports = createElement
 
-},{"./vdom/create-element.js":25}],20:[function(require,module,exports){
+},{"./vdom/create-element.js":28}],16:[function(require,module,exports){
 var diff = require("./vtree/diff.js")
 
 module.exports = diff
 
-},{"./vtree/diff.js":45}],21:[function(require,module,exports){
+},{"./vtree/diff.js":48}],17:[function(require,module,exports){
 var h = require("./virtual-hyperscript/index.js")
 
 module.exports = h
 
-},{"./virtual-hyperscript/index.js":32}],22:[function(require,module,exports){
+},{"./virtual-hyperscript/index.js":35}],18:[function(require,module,exports){
 var diff = require("./diff.js")
 var patch = require("./patch.js")
 var h = require("./h.js")
@@ -13434,12 +13250,225 @@ module.exports = {
     VText: VText
 }
 
-},{"./create-element.js":19,"./diff.js":20,"./h.js":21,"./patch.js":23,"./vnode/vnode.js":41,"./vnode/vtext.js":43}],23:[function(require,module,exports){
+},{"./create-element.js":15,"./diff.js":16,"./h.js":17,"./patch.js":26,"./vnode/vnode.js":44,"./vnode/vtext.js":46}],19:[function(require,module,exports){
+/*!
+ * Cross-Browser Split 1.1.1
+ * Copyright 2007-2012 Steven Levithan <stevenlevithan.com>
+ * Available under the MIT License
+ * ECMAScript compliant, uniform cross-browser split method
+ */
+
+/**
+ * Splits a string into an array of strings using a regex or string separator. Matches of the
+ * separator are not included in the result array. However, if `separator` is a regex that contains
+ * capturing groups, backreferences are spliced into the result each time `separator` is matched.
+ * Fixes browser bugs compared to the native `String.prototype.split` and can be used reliably
+ * cross-browser.
+ * @param {String} str String to split.
+ * @param {RegExp|String} separator Regex or string to use for separating the string.
+ * @param {Number} [limit] Maximum number of items to include in the result array.
+ * @returns {Array} Array of substrings.
+ * @example
+ *
+ * // Basic use
+ * split('a b c d', ' ');
+ * // -> ['a', 'b', 'c', 'd']
+ *
+ * // With limit
+ * split('a b c d', ' ', 2);
+ * // -> ['a', 'b']
+ *
+ * // Backreferences in result array
+ * split('..word1 word2..', /([a-z]+)(\d+)/i);
+ * // -> ['..', 'word', '1', ' ', 'word', '2', '..']
+ */
+module.exports = (function split(undef) {
+
+  var nativeSplit = String.prototype.split,
+    compliantExecNpcg = /()??/.exec("")[1] === undef,
+    // NPCG: nonparticipating capturing group
+    self;
+
+  self = function(str, separator, limit) {
+    // If `separator` is not a regex, use `nativeSplit`
+    if (Object.prototype.toString.call(separator) !== "[object RegExp]") {
+      return nativeSplit.call(str, separator, limit);
+    }
+    var output = [],
+      flags = (separator.ignoreCase ? "i" : "") + (separator.multiline ? "m" : "") + (separator.extended ? "x" : "") + // Proposed for ES6
+      (separator.sticky ? "y" : ""),
+      // Firefox 3+
+      lastLastIndex = 0,
+      // Make `global` and avoid `lastIndex` issues by working with a copy
+      separator = new RegExp(separator.source, flags + "g"),
+      separator2, match, lastIndex, lastLength;
+    str += ""; // Type-convert
+    if (!compliantExecNpcg) {
+      // Doesn't need flags gy, but they don't hurt
+      separator2 = new RegExp("^" + separator.source + "$(?!\\s)", flags);
+    }
+    /* Values for `limit`, per the spec:
+     * If undefined: 4294967295 // Math.pow(2, 32) - 1
+     * If 0, Infinity, or NaN: 0
+     * If positive number: limit = Math.floor(limit); if (limit > 4294967295) limit -= 4294967296;
+     * If negative number: 4294967296 - Math.floor(Math.abs(limit))
+     * If other: Type-convert, then use the above rules
+     */
+    limit = limit === undef ? -1 >>> 0 : // Math.pow(2, 32) - 1
+    limit >>> 0; // ToUint32(limit)
+    while (match = separator.exec(str)) {
+      // `separator.lastIndex` is not reliable cross-browser
+      lastIndex = match.index + match[0].length;
+      if (lastIndex > lastLastIndex) {
+        output.push(str.slice(lastLastIndex, match.index));
+        // Fix browsers whose `exec` methods don't consistently return `undefined` for
+        // nonparticipating capturing groups
+        if (!compliantExecNpcg && match.length > 1) {
+          match[0].replace(separator2, function() {
+            for (var i = 1; i < arguments.length - 2; i++) {
+              if (arguments[i] === undef) {
+                match[i] = undef;
+              }
+            }
+          });
+        }
+        if (match.length > 1 && match.index < str.length) {
+          Array.prototype.push.apply(output, match.slice(1));
+        }
+        lastLength = match[0].length;
+        lastLastIndex = lastIndex;
+        if (output.length >= limit) {
+          break;
+        }
+      }
+      if (separator.lastIndex === match.index) {
+        separator.lastIndex++; // Avoid an infinite loop
+      }
+    }
+    if (lastLastIndex === str.length) {
+      if (lastLength || !separator.test("")) {
+        output.push("");
+      }
+    } else {
+      output.push(str.slice(lastLastIndex));
+    }
+    return output.length > limit ? output.slice(0, limit) : output;
+  };
+
+  return self;
+})();
+
+},{}],20:[function(require,module,exports){
+'use strict';
+
+var OneVersionConstraint = require('individual/one-version');
+
+var MY_VERSION = '7';
+OneVersionConstraint('ev-store', MY_VERSION);
+
+var hashKey = '__EV_STORE_KEY@' + MY_VERSION;
+
+module.exports = EvStore;
+
+function EvStore(elem) {
+    var hash = elem[hashKey];
+
+    if (!hash) {
+        hash = elem[hashKey] = {};
+    }
+
+    return hash;
+}
+
+},{"individual/one-version":22}],21:[function(require,module,exports){
+(function (global){
+'use strict';
+
+/*global window, global*/
+
+var root = typeof window !== 'undefined' ?
+    window : typeof global !== 'undefined' ?
+    global : {};
+
+module.exports = Individual;
+
+function Individual(key, value) {
+    if (key in root) {
+        return root[key];
+    }
+
+    root[key] = value;
+
+    return value;
+}
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],22:[function(require,module,exports){
+'use strict';
+
+var Individual = require('./index.js');
+
+module.exports = OneVersion;
+
+function OneVersion(moduleName, version, defaultValue) {
+    var key = '__INDIVIDUAL_ONE_VERSION_' + moduleName;
+    var enforceKey = key + '_ENFORCE_SINGLETON';
+
+    var versionValue = Individual(enforceKey, version);
+
+    if (versionValue !== version) {
+        throw new Error('Can only have one copy of ' +
+            moduleName + '.\n' +
+            'You already have version ' + versionValue +
+            ' installed.\n' +
+            'This means you cannot install version ' + version);
+    }
+
+    return Individual(key, defaultValue);
+}
+
+},{"./index.js":21}],23:[function(require,module,exports){
+(function (global){
+var topLevel = typeof global !== 'undefined' ? global :
+    typeof window !== 'undefined' ? window : {}
+var minDoc = require('min-document');
+
+if (typeof document !== 'undefined') {
+    module.exports = document;
+} else {
+    var doccy = topLevel['__GLOBAL_DOCUMENT_CACHE@4'];
+
+    if (!doccy) {
+        doccy = topLevel['__GLOBAL_DOCUMENT_CACHE@4'] = minDoc;
+    }
+
+    module.exports = doccy;
+}
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"min-document":51}],24:[function(require,module,exports){
+"use strict";
+
+module.exports = function isObject(x) {
+	return typeof x === "object" && x !== null;
+};
+
+},{}],25:[function(require,module,exports){
+var nativeIsArray = Array.isArray
+var toString = Object.prototype.toString
+
+module.exports = nativeIsArray || isArray
+
+function isArray(obj) {
+    return toString.call(obj) === "[object Array]"
+}
+
+},{}],26:[function(require,module,exports){
 var patch = require("./vdom/patch.js")
 
 module.exports = patch
 
-},{"./vdom/patch.js":28}],24:[function(require,module,exports){
+},{"./vdom/patch.js":31}],27:[function(require,module,exports){
 var isObject = require("is-object")
 var isHook = require("../vnode/is-vhook.js")
 
@@ -13538,7 +13567,7 @@ function getPrototype(value) {
     }
 }
 
-},{"../vnode/is-vhook.js":36,"is-object":12}],25:[function(require,module,exports){
+},{"../vnode/is-vhook.js":39,"is-object":24}],28:[function(require,module,exports){
 var document = require("global/document")
 
 var applyProperties = require("./apply-properties")
@@ -13586,7 +13615,7 @@ function createElement(vnode, opts) {
     return node
 }
 
-},{"../vnode/handle-thunk.js":34,"../vnode/is-vnode.js":37,"../vnode/is-vtext.js":38,"../vnode/is-widget.js":39,"./apply-properties":24,"global/document":9}],26:[function(require,module,exports){
+},{"../vnode/handle-thunk.js":37,"../vnode/is-vnode.js":40,"../vnode/is-vtext.js":41,"../vnode/is-widget.js":42,"./apply-properties":27,"global/document":23}],29:[function(require,module,exports){
 // Maps a virtual DOM tree onto a real DOM tree in an efficient manner.
 // We don't want to read all of the DOM nodes in the tree so we use
 // the in-order tree indexing to eliminate recursion down certain branches.
@@ -13673,7 +13702,7 @@ function ascending(a, b) {
     return a > b ? 1 : -1
 }
 
-},{}],27:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 var applyProperties = require("./apply-properties")
 
 var isWidget = require("../vnode/is-widget.js")
@@ -13826,7 +13855,7 @@ function replaceRoot(oldRoot, newRoot) {
     return newRoot;
 }
 
-},{"../vnode/is-widget.js":39,"../vnode/vpatch.js":42,"./apply-properties":24,"./update-widget":29}],28:[function(require,module,exports){
+},{"../vnode/is-widget.js":42,"../vnode/vpatch.js":45,"./apply-properties":27,"./update-widget":32}],31:[function(require,module,exports){
 var document = require("global/document")
 var isArray = require("x-is-array")
 
@@ -13908,7 +13937,7 @@ function patchIndices(patches) {
     return indices
 }
 
-},{"./create-element":25,"./dom-index":26,"./patch-op":27,"global/document":9,"x-is-array":46}],29:[function(require,module,exports){
+},{"./create-element":28,"./dom-index":29,"./patch-op":30,"global/document":23,"x-is-array":25}],32:[function(require,module,exports){
 var isWidget = require("../vnode/is-widget.js")
 
 module.exports = updateWidget
@@ -13925,7 +13954,7 @@ function updateWidget(a, b) {
     return false
 }
 
-},{"../vnode/is-widget.js":39}],30:[function(require,module,exports){
+},{"../vnode/is-widget.js":42}],33:[function(require,module,exports){
 'use strict';
 
 var EvStore = require('ev-store');
@@ -13954,7 +13983,7 @@ EvHook.prototype.unhook = function(node, propertyName) {
     es[propName] = undefined;
 };
 
-},{"ev-store":5}],31:[function(require,module,exports){
+},{"ev-store":20}],34:[function(require,module,exports){
 'use strict';
 
 module.exports = SoftSetHook;
@@ -13973,7 +14002,7 @@ SoftSetHook.prototype.hook = function (node, propertyName) {
     }
 };
 
-},{}],32:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 'use strict';
 
 var isArray = require('x-is-array');
@@ -14112,7 +14141,7 @@ function errorString(obj) {
     }
 }
 
-},{"../vnode/is-thunk":35,"../vnode/is-vhook":36,"../vnode/is-vnode":37,"../vnode/is-vtext":38,"../vnode/is-widget":39,"../vnode/vnode.js":41,"../vnode/vtext.js":43,"./hooks/ev-hook.js":30,"./hooks/soft-set-hook.js":31,"./parse-tag.js":33,"x-is-array":46}],33:[function(require,module,exports){
+},{"../vnode/is-thunk":38,"../vnode/is-vhook":39,"../vnode/is-vnode":40,"../vnode/is-vtext":41,"../vnode/is-widget":42,"../vnode/vnode.js":44,"../vnode/vtext.js":46,"./hooks/ev-hook.js":33,"./hooks/soft-set-hook.js":34,"./parse-tag.js":36,"x-is-array":25}],36:[function(require,module,exports){
 'use strict';
 
 var split = require('browser-split');
@@ -14168,7 +14197,7 @@ function parseTag(tag, props) {
     return props.namespace ? tagName : tagName.toUpperCase();
 }
 
-},{"browser-split":2}],34:[function(require,module,exports){
+},{"browser-split":19}],37:[function(require,module,exports){
 var isVNode = require("./is-vnode")
 var isVText = require("./is-vtext")
 var isWidget = require("./is-widget")
@@ -14210,14 +14239,14 @@ function renderThunk(thunk, previous) {
     return renderedThunk
 }
 
-},{"./is-thunk":35,"./is-vnode":37,"./is-vtext":38,"./is-widget":39}],35:[function(require,module,exports){
+},{"./is-thunk":38,"./is-vnode":40,"./is-vtext":41,"./is-widget":42}],38:[function(require,module,exports){
 module.exports = isThunk
 
 function isThunk(t) {
     return t && t.type === "Thunk"
 }
 
-},{}],36:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 module.exports = isHook
 
 function isHook(hook) {
@@ -14226,7 +14255,7 @@ function isHook(hook) {
        typeof hook.unhook === "function" && !hook.hasOwnProperty("unhook"))
 }
 
-},{}],37:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 var version = require("./version")
 
 module.exports = isVirtualNode
@@ -14235,7 +14264,7 @@ function isVirtualNode(x) {
     return x && x.type === "VirtualNode" && x.version === version
 }
 
-},{"./version":40}],38:[function(require,module,exports){
+},{"./version":43}],41:[function(require,module,exports){
 var version = require("./version")
 
 module.exports = isVirtualText
@@ -14244,17 +14273,17 @@ function isVirtualText(x) {
     return x && x.type === "VirtualText" && x.version === version
 }
 
-},{"./version":40}],39:[function(require,module,exports){
+},{"./version":43}],42:[function(require,module,exports){
 module.exports = isWidget
 
 function isWidget(w) {
     return w && w.type === "Widget"
 }
 
-},{}],40:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 module.exports = "2"
 
-},{}],41:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 var version = require("./version")
 var isVNode = require("./is-vnode")
 var isWidget = require("./is-widget")
@@ -14328,7 +14357,7 @@ function VirtualNode(tagName, properties, children, key, namespace) {
 VirtualNode.prototype.version = version
 VirtualNode.prototype.type = "VirtualNode"
 
-},{"./is-thunk":35,"./is-vhook":36,"./is-vnode":37,"./is-widget":39,"./version":40}],42:[function(require,module,exports){
+},{"./is-thunk":38,"./is-vhook":39,"./is-vnode":40,"./is-widget":42,"./version":43}],45:[function(require,module,exports){
 var version = require("./version")
 
 VirtualPatch.NONE = 0
@@ -14352,7 +14381,7 @@ function VirtualPatch(type, vNode, patch) {
 VirtualPatch.prototype.version = version
 VirtualPatch.prototype.type = "VirtualPatch"
 
-},{"./version":40}],43:[function(require,module,exports){
+},{"./version":43}],46:[function(require,module,exports){
 var version = require("./version")
 
 module.exports = VirtualText
@@ -14364,7 +14393,7 @@ function VirtualText(text) {
 VirtualText.prototype.version = version
 VirtualText.prototype.type = "VirtualText"
 
-},{"./version":40}],44:[function(require,module,exports){
+},{"./version":43}],47:[function(require,module,exports){
 var isObject = require("is-object")
 var isHook = require("../vnode/is-vhook")
 
@@ -14424,7 +14453,7 @@ function getPrototype(value) {
   }
 }
 
-},{"../vnode/is-vhook":36,"is-object":12}],45:[function(require,module,exports){
+},{"../vnode/is-vhook":39,"is-object":24}],48:[function(require,module,exports){
 var isArray = require("x-is-array")
 
 var VPatch = require("../vnode/vpatch")
@@ -14853,34 +14882,7 @@ function appendPatch(apply, patch) {
     }
 }
 
-},{"../vnode/handle-thunk":34,"../vnode/is-thunk":35,"../vnode/is-vnode":37,"../vnode/is-vtext":38,"../vnode/is-widget":39,"../vnode/vpatch":42,"./diff-props":44,"x-is-array":46}],46:[function(require,module,exports){
-var nativeIsArray = Array.isArray
-var toString = Object.prototype.toString
-
-module.exports = nativeIsArray || isArray
-
-function isArray(obj) {
-    return toString.call(obj) === "[object Array]"
-}
-
-},{}],47:[function(require,module,exports){
-module.exports = extend
-
-function extend(target) {
-    for (var i = 1; i < arguments.length; i++) {
-        var source = arguments[i]
-
-        for (var key in source) {
-            if (source.hasOwnProperty(key)) {
-                target[key] = source[key]
-            }
-        }
-    }
-
-    return target
-}
-
-},{}],48:[function(require,module,exports){
+},{"../vnode/handle-thunk":37,"../vnode/is-thunk":38,"../vnode/is-vnode":40,"../vnode/is-vtext":41,"../vnode/is-widget":42,"../vnode/vpatch":45,"./diff-props":47,"x-is-array":25}],49:[function(require,module,exports){
 // my twitter keys
 var twitterKeys = {
   consumer_key : "zGsThkdbUeEq02otJ8myeXpd0"
@@ -14890,7 +14892,10 @@ var twitterKeys = {
 }
 
 // my neighborhood
-var hood = [-122.304249, 37.845487, -122.265239, 37.863022]
+//var hood = [-122.304249, 37.845487, -122.265239, 37.863022]
+
+// my extended 'neighborhood'
+var hood = [-122.307047, 37.839642, -122.256064, 37.861601]
 
 var BoundingBox = require('geocoordinate').BoundingBox;
 var bbox = new BoundingBox();
@@ -14903,7 +14908,7 @@ module.exports = {
 	, bboxString: hood.join(',')
 }
 
-},{"geocoordinate":8}],49:[function(require,module,exports){
+},{"geocoordinate":4}],50:[function(require,module,exports){
 module.exports = [
 [{"metadata":{"iso_language_code":"en","result_type":"recent"},"created_at":"Sun Oct 18 23:19:59 +0000 2015","id":655886070609915900,"id_str":"655886070609915905","text":"A day late at therarebarrel, but still some fantastic stuff on tap and a great atmosphere. Scratch… https://t.co/MvwojSerc4","source":"<a href=\"http://instagram.com\" rel=\"nofollow\">Instagram</a>","truncated":false,"in_reply_to_status_id":null,"in_reply_to_status_id_str":null,"in_reply_to_user_id":null,"in_reply_to_user_id_str":null,"in_reply_to_screen_name":null,"user":{"id":318775252,"id_str":"318775252","name":"Hall of Cost","screen_name":"BrentLepping","location":"The Ville","description":"Lots of dogs, craft beer, UofL sports and travel stuff around here. I'd rather be somewhere out west.","url":null,"entities":{"description":{"urls":[]}},"protected":false,"followers_count":582,"friends_count":458,"listed_count":26,"created_at":"Fri Jun 17 01:20:24 +0000 2011","favourites_count":70,"utc_offset":-14400,"time_zone":"Eastern Time (US & Canada)","geo_enabled":true,"verified":false,"statuses_count":10363,"lang":"en","contributors_enabled":false,"is_translator":false,"is_translation_enabled":false,"profile_background_color":"C0DEED","profile_background_image_url":"http://pbs.twimg.com/profile_background_images/618475272/irhfxpwj8qglwnoxf8ak.jpeg","profile_background_image_url_https":"https://pbs.twimg.com/profile_background_images/618475272/irhfxpwj8qglwnoxf8ak.jpeg","profile_background_tile":true,"profile_image_url":"http://pbs.twimg.com/profile_images/569605043137957888/CZu3-f7S_normal.jpeg","profile_image_url_https":"https://pbs.twimg.com/profile_images/569605043137957888/CZu3-f7S_normal.jpeg","profile_banner_url":"https://pbs.twimg.com/profile_banners/318775252/1360431528","profile_link_color":"0084B4","profile_sidebar_border_color":"C0DEED","profile_sidebar_fill_color":"DDEEF6","profile_text_color":"333333","profile_use_background_image":true,"has_extended_profile":false,"default_profile":false,"default_profile_image":false,"following":false,"follow_request_sent":false,"notifications":false},"geo":{"type":"Point","coordinates":[37.85845547,-122.29164968]},"coordinates":{"type":"Point","coordinates":[-122.29164968,37.85845547]},"place":{"id":"5ef5b7f391e30aff","url":"https://api.twitter.com/1.1/geo/id/5ef5b7f391e30aff.json","place_type":"city","name":"Berkeley","full_name":"Berkeley, CA","country_code":"US","country":"United States","contained_within":[],"bounding_box":{"type":"Polygon","coordinates":[[[-122.324818,37.8459532],[-122.234225,37.8459532],[-122.234225,37.905738],[-122.324818,37.905738]]]},"attributes":{}},"contributors":null,"is_quote_status":false,"retweet_count":0,"favorite_count":0,"entities":{"hashtags":[],"symbols":[],"user_mentions":[],"urls":[{"url":"https://t.co/MvwojSerc4","expanded_url":"https://instagram.com/p/8_0T_aPKDe/","display_url":"instagram.com/p/8_0T_aPKDe/","indices":[100,123]}]},"favorited":false,"retweeted":false,"possibly_sensitive":false,"lang":"en"}]
 ,
@@ -14914,9 +14919,9 @@ module.exports = [
 [{"metadata":{"iso_language_code":"en","result_type":"recent"},"created_at":"Sun Oct 18 23:19:59 +0000 2015","id":655886070609915900,"id_str":"655886070609915905","text":"A day late at therarebarrel, but still some fantastic stuff on tap and a great atmosphere. Scratch… https://t.co/MvwojSerc4","source":"<a href=\"http://instagram.com\" rel=\"nofollow\">Instagram</a>","truncated":false,"in_reply_to_status_id":null,"in_reply_to_status_id_str":null,"in_reply_to_user_id":null,"in_reply_to_user_id_str":null,"in_reply_to_screen_name":null,"user":{"id":318775252,"id_str":"318775252","name":"Hall of Cost","screen_name":"BrentLepping","location":"The Ville","description":"Lots of dogs, craft beer, UofL sports and travel stuff around here. I'd rather be somewhere out west.","url":null,"entities":{"description":{"urls":[]}},"protected":false,"followers_count":582,"friends_count":458,"listed_count":26,"created_at":"Fri Jun 17 01:20:24 +0000 2011","favourites_count":70,"utc_offset":-14400,"time_zone":"Eastern Time (US & Canada)","geo_enabled":true,"verified":false,"statuses_count":10363,"lang":"en","contributors_enabled":false,"is_translator":false,"is_translation_enabled":false,"profile_background_color":"C0DEED","profile_background_image_url":"http://pbs.twimg.com/profile_background_images/618475272/irhfxpwj8qglwnoxf8ak.jpeg","profile_background_image_url_https":"https://pbs.twimg.com/profile_background_images/618475272/irhfxpwj8qglwnoxf8ak.jpeg","profile_background_tile":true,"profile_image_url":"http://pbs.twimg.com/profile_images/569605043137957888/CZu3-f7S_normal.jpeg","profile_image_url_https":"https://pbs.twimg.com/profile_images/569605043137957888/CZu3-f7S_normal.jpeg","profile_banner_url":"https://pbs.twimg.com/profile_banners/318775252/1360431528","profile_link_color":"0084B4","profile_sidebar_border_color":"C0DEED","profile_sidebar_fill_color":"DDEEF6","profile_text_color":"333333","profile_use_background_image":true,"has_extended_profile":false,"default_profile":false,"default_profile_image":false,"following":false,"follow_request_sent":false,"notifications":false},"geo":{"type":"Point","coordinates":[37.85845547,-122.29164968]},"coordinates":{"type":"Point","coordinates":[-122.29164968,37.85845547]},"place":{"id":"5ef5b7f391e30aff","url":"https://api.twitter.com/1.1/geo/id/5ef5b7f391e30aff.json","place_type":"city","name":"Berkeley","full_name":"Berkeley, CA","country_code":"US","country":"United States","contained_within":[],"bounding_box":{"type":"Polygon","coordinates":[[[-122.324818,37.8459532],[-122.234225,37.8459532],[-122.234225,37.905738],[-122.324818,37.905738]]]},"attributes":{}},"contributors":null,"is_quote_status":false,"retweet_count":0,"favorite_count":0,"entities":{"hashtags":[],"symbols":[],"user_mentions":[],"urls":[{"url":"https://t.co/MvwojSerc4","expanded_url":"https://instagram.com/p/8_0T_aPKDe/","display_url":"instagram.com/p/8_0T_aPKDe/","indices":[100,123]}]},"favorited":false,"retweeted":false,"possibly_sensitive":false,"lang":"en"},{"created_at":"Sun Oct 18 23:45:52 +0000 2015","id":655892585769250800,"id_str":"655892585769250816","text":"Scrap yards in southwest #berkeley 💠♻️ #iphone6s #bayarea #scrapyard @ Urban Ore https://t.co/QwEqeydmyk","source":"<a href=\"http://instagram.com\" rel=\"nofollow\">Instagram</a>","truncated":false,"in_reply_to_status_id":null,"in_reply_to_status_id_str":null,"in_reply_to_user_id":null,"in_reply_to_user_id_str":null,"in_reply_to_screen_name":null,"user":{"id":3312883916,"id_str":"3312883916","name":"420maybe","screen_name":"_matthewlawson","location":"Berkeley, CA","url":"http://911officialblog.com","description":"Personal twitter for whatever. Photo retoucher for startup in SF. Follow me on instagram @_matthewlawson","protected":false,"verified":false,"followers_count":37,"friends_count":130,"listed_count":1,"favourites_count":617,"statuses_count":501,"created_at":"Wed Aug 12 00:56:54 +0000 2015","utc_offset":null,"time_zone":null,"geo_enabled":true,"lang":"en","contributors_enabled":false,"is_translator":false,"profile_background_color":"000000","profile_background_image_url":"http://abs.twimg.com/images/themes/theme1/bg.png","profile_background_image_url_https":"https://abs.twimg.com/images/themes/theme1/bg.png","profile_background_tile":false,"profile_link_color":"4A913C","profile_sidebar_border_color":"000000","profile_sidebar_fill_color":"000000","profile_text_color":"000000","profile_use_background_image":false,"profile_image_url":"http://pbs.twimg.com/profile_images/652351981537759232/sAC8nVEe_normal.jpg","profile_image_url_https":"https://pbs.twimg.com/profile_images/652351981537759232/sAC8nVEe_normal.jpg","profile_banner_url":"https://pbs.twimg.com/profile_banners/3312883916/1439341921","default_profile":false,"default_profile_image":false,"following":null,"follow_request_sent":null,"notifications":null},"geo":{"type":"Point","coordinates":[37.8506317,-122.2900085]},"coordinates":{"type":"Point","coordinates":[-122.2900085,37.8506317]},"place":{"id":"5ef5b7f391e30aff","url":"https://api.twitter.com/1.1/geo/id/5ef5b7f391e30aff.json","place_type":"city","name":"Berkeley","full_name":"Berkeley, CA","country_code":"US","country":"United States","bounding_box":{"type":"Polygon","coordinates":[[[-122.324818,37.845953],[-122.324818,37.905738],[-122.234225,37.905738],[-122.234225,37.845953]]]},"attributes":{}},"contributors":null,"is_quote_status":false,"retweet_count":0,"favorite_count":0,"entities":{"hashtags":[{"text":"berkeley","indices":[25,34]},{"text":"iphone6s","indices":[39,48]},{"text":"bayarea","indices":[49,57]},{"text":"scrapyard","indices":[58,68]}],"urls":[{"url":"https://t.co/QwEqeydmyk","expanded_url":"https://instagram.com/p/8_3OMUwaic/","display_url":"instagram.com/p/8_3OMUwaic/","indices":[81,104]}],"user_mentions":[],"symbols":[]},"favorited":false,"retweeted":false,"possibly_sensitive":false,"filter_level":"low","lang":"en","timestamp_ms":"1445211952999"},{"created_at":"Sun Oct 18 23:58:21 +0000 2015","id":655895724849279000,"id_str":"655895724849278976","text":"#Disney #Halloween is everywhere (at @Walgreens in Berkeley, CA w/ @meekorouse) https://t.co/14iNnqKc4Q http://t.co/F6P7QsqPgM","source":"<a href=\"http://foursquare.com\" rel=\"nofollow\">Foursquare</a>","truncated":false,"in_reply_to_status_id":null,"in_reply_to_status_id_str":null,"in_reply_to_user_id":null,"in_reply_to_user_id_str":null,"in_reply_to_screen_name":null,"user":{"id":12091872,"id_str":"12091872","name":"Sean Rouse","screen_name":"seanyodarouse","location":"Opposite The Golden Gate","url":"http://seanyodarouse.blogspot.com/","description":"Married Senior Delivery Specialist who works for EMC Corporation, graduated from Cal & loves all things Disney. My tweets are my own, not EMC Corporation's.","protected":false,"verified":false,"followers_count":1028,"friends_count":1989,"listed_count":65,"favourites_count":5427,"statuses_count":32646,"created_at":"Fri Jan 11 00:33:14 +0000 2008","utc_offset":-25200,"time_zone":"Pacific Time (US & Canada)","geo_enabled":true,"lang":"en","contributors_enabled":false,"is_translator":false,"profile_background_color":"C0DEED","profile_background_image_url":"http://abs.twimg.com/images/themes/theme1/bg.png","profile_background_image_url_https":"https://abs.twimg.com/images/themes/theme1/bg.png","profile_background_tile":false,"profile_link_color":"0084B4","profile_sidebar_border_color":"C0DEED","profile_sidebar_fill_color":"DDEEF6","profile_text_color":"333333","profile_use_background_image":true,"profile_image_url":"http://pbs.twimg.com/profile_images/647916295984279552/wrYF9nL1_normal.jpg","profile_image_url_https":"https://pbs.twimg.com/profile_images/647916295984279552/wrYF9nL1_normal.jpg","profile_banner_url":"https://pbs.twimg.com/profile_banners/12091872/1422486144","default_profile":true,"default_profile_image":false,"following":null,"follow_request_sent":null,"notifications":null},"geo":{"type":"Point","coordinates":[37.85789103,-122.2672026]},"coordinates":{"type":"Point","coordinates":[-122.2672026,37.85789103]},"place":{"id":"5ef5b7f391e30aff","url":"https://api.twitter.com/1.1/geo/id/5ef5b7f391e30aff.json","place_type":"city","name":"Berkeley","full_name":"Berkeley, CA","country_code":"US","country":"United States","bounding_box":{"type":"Polygon","coordinates":[[[-122.324818,37.845953],[-122.324818,37.905738],[-122.234225,37.905738],[-122.234225,37.845953]]]},"attributes":{}},"contributors":null,"is_quote_status":false,"retweet_count":0,"favorite_count":0,"entities":{"hashtags":[{"text":"Disney","indices":[0,7]},{"text":"Halloween","indices":[8,18]}],"urls":[{"url":"https://t.co/14iNnqKc4Q","expanded_url":"https://www.swarmapp.com/c/jSjRyz4dLhL","display_url":"swarmapp.com/c/jSjRyz4dLhL","indices":[80,103]}],"user_mentions":[{"screen_name":"Walgreens","name":"Walgreens","id":46177695,"id_str":"46177695","indices":[37,47]},{"screen_name":"meekorouse","name":"PS Rouse","id":11922222,"id_str":"11922222","indices":[67,78]}],"symbols":[],"media":[{"id":655895724492763100,"id_str":"655895724492763136","indices":[104,126],"media_url":"http://pbs.twimg.com/media/CRo1r7QWsAAf5Mr.jpg","media_url_https":"https://pbs.twimg.com/media/CRo1r7QWsAAf5Mr.jpg","url":"http://t.co/F6P7QsqPgM","display_url":"pic.twitter.com/F6P7QsqPgM","expanded_url":"http://twitter.com/seanyodarouse/status/655895724849278976/photo/1","type":"photo","sizes":{"small":{"w":340,"h":255,"resize":"fit"},"medium":{"w":600,"h":450,"resize":"fit"},"thumb":{"w":150,"h":150,"resize":"crop"},"large":{"w":1024,"h":768,"resize":"fit"}}}]},"extended_entities":{"media":[{"id":655895724492763100,"id_str":"655895724492763136","indices":[104,126],"media_url":"http://pbs.twimg.com/media/CRo1r7QWsAAf5Mr.jpg","media_url_https":"https://pbs.twimg.com/media/CRo1r7QWsAAf5Mr.jpg","url":"http://t.co/F6P7QsqPgM","display_url":"pic.twitter.com/F6P7QsqPgM","expanded_url":"http://twitter.com/seanyodarouse/status/655895724849278976/photo/1","type":"photo","sizes":{"small":{"w":340,"h":255,"resize":"fit"},"medium":{"w":600,"h":450,"resize":"fit"},"thumb":{"w":150,"h":150,"resize":"crop"},"large":{"w":1024,"h":768,"resize":"fit"}}}]},"favorited":false,"retweeted":false,"possibly_sensitive":false,"filter_level":"low","lang":"en","timestamp_ms":"1445212701414"},{"created_at":"Mon Oct 19 00:01:21 +0000 2015","id":655896480377610200,"id_str":"655896480377610240","text":"Went to see #TheRover 😁 @ Ashby Stage https://t.co/sXarfNCYj9","source":"<a href=\"http://instagram.com\" rel=\"nofollow\">Instagram</a>","truncated":false,"in_reply_to_status_id":null,"in_reply_to_status_id_str":null,"in_reply_to_user_id":null,"in_reply_to_user_id_str":null,"in_reply_to_screen_name":null,"user":{"id":438169156,"id_str":"438169156","name":"Micah St. Clair","screen_name":"Micah_StClair","location":"Atlanta, Georgia ","url":"http://gracefully-dancing-through-life.tumblr.com/","description":"Dancer, Singer, \nGracefully Dancing through Life.","protected":false,"verified":false,"followers_count":24,"friends_count":84,"listed_count":2,"favourites_count":6,"statuses_count":281,"created_at":"Fri Dec 16 08:08:16 +0000 2011","utc_offset":-14400,"time_zone":"Eastern Time (US & Canada)","geo_enabled":true,"lang":"en","contributors_enabled":false,"is_translator":false,"profile_background_color":"202121","profile_background_image_url":"http://pbs.twimg.com/profile_background_images/479753892561813504/3BQyOIK5.jpeg","profile_background_image_url_https":"https://pbs.twimg.com/profile_background_images/479753892561813504/3BQyOIK5.jpeg","profile_background_tile":false,"profile_link_color":"ABB8C2","profile_sidebar_border_color":"000000","profile_sidebar_fill_color":"252429","profile_text_color":"666666","profile_use_background_image":true,"profile_image_url":"http://pbs.twimg.com/profile_images/547528963153600513/TikMV5cV_normal.jpeg","profile_image_url_https":"https://pbs.twimg.com/profile_images/547528963153600513/TikMV5cV_normal.jpeg","profile_banner_url":"https://pbs.twimg.com/profile_banners/438169156/1434152255","default_profile":false,"default_profile_image":false,"following":null,"follow_request_sent":null,"notifications":null},"geo":{"type":"Point","coordinates":[37.8545799,-122.2708893]},"coordinates":{"type":"Point","coordinates":[-122.2708893,37.8545799]},"place":{"id":"5ef5b7f391e30aff","url":"https://api.twitter.com/1.1/geo/id/5ef5b7f391e30aff.json","place_type":"city","name":"Berkeley","full_name":"Berkeley, CA","country_code":"US","country":"United States","bounding_box":{"type":"Polygon","coordinates":[[[-122.324818,37.845953],[-122.324818,37.905738],[-122.234225,37.905738],[-122.234225,37.845953]]]},"attributes":{}},"contributors":null,"is_quote_status":false,"retweet_count":0,"favorite_count":0,"entities":{"hashtags":[{"text":"TheRover","indices":[12,21]}],"urls":[{"url":"https://t.co/sXarfNCYj9","expanded_url":"https://instagram.com/p/8_5DReKkrE/","display_url":"instagram.com/p/8_5DReKkrE/","indices":[38,61]}],"user_mentions":[],"symbols":[]},"favorited":false,"retweeted":false,"possibly_sensitive":false,"filter_level":"low","lang":"en","timestamp_ms":"1445212881546"}]
 ]
 
-},{}],50:[function(require,module,exports){
-
 },{}],51:[function(require,module,exports){
+
+},{}],52:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
