@@ -90,13 +90,26 @@ function mapView (tweets) {
 
 	}
 
-	// no maps -- draw a map of my hood.
+	// draw a map of my hood.
+	// how do we align the map with the points?
+	//    -- easily ---- 1, static size 
+	//    -- difficult - fn of window size + map image size
+	//         * find window size / keep it in state
+	//				   - not a bad idea generally 
+	//				 * keep track of bg image size (?)
+	//				 * fn that scales to my liking
+	//
+	// seems clear i will take the difficult path. discovery!
+	// GOALS:
+	//   - make CSS more like processing (width/height)
+	//   - think about (re)factoring the client side..
   return h('div#map'
 		, { style: {
 			  width: '70%'
-			  , cssFloat: 'left'
-			  , height: '100vh'
-		    , backgroundColor: 'aliceblue'
+			  , cssFloat: 'left'  
+			  , height: '900px'  // height of map img
+			  , width: '1025px'  // width of map img
+		    , backgroundImage: 'url(google-map.png)'
 				, madeUpThing: 'nice'
 			}
 		}
